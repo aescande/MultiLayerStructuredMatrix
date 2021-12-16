@@ -1,0 +1,318 @@
+/** Copyright 2021 CNRS-AIST JRL*/
+
+#include <mlsm/internal/Size.h>
+
+#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
+#define DOCTEST_CONFIG_SUPER_FAST_ASSERTS
+#include "doctest/doctest.h"
+
+using namespace mls::internal;
+
+TEST_CASE("Construction")
+{
+  {
+    Size s(3);
+    FAST_CHECK_EQ(int(s), 3);
+    FAST_CHECK_UNARY(s.isfinite());
+    FAST_CHECK_UNARY_FALSE(s.isinf());
+    FAST_CHECK_UNARY_FALSE(s.isnan());
+  }
+
+  {
+    Size s(Size::inf);
+    FAST_CHECK_UNARY_FALSE(s.isfinite());
+    FAST_CHECK_UNARY(s.isinf());
+    FAST_CHECK_UNARY_FALSE(s.isnan());
+  }
+}
+
+TEST_CASE("Produce NaN")
+{
+  Size l(-Size::inf), u(Size::inf);
+  Size n = l + u;
+  FAST_CHECK_UNARY(n.isnan());
+}
+
+TEST_CASE("Comparisons")
+{
+  Size a(3), b(-2), c(4), l(-Size::inf), u(Size::inf);
+  Size n = l + u;
+
+  FAST_CHECK_UNARY(a == a);
+  FAST_CHECK_UNARY_FALSE(a != a);
+  FAST_CHECK_UNARY(a >= a);
+  FAST_CHECK_UNARY_FALSE(a > a);
+  FAST_CHECK_UNARY(a <= a);
+  FAST_CHECK_UNARY_FALSE(a < a);
+  FAST_CHECK_UNARY_FALSE(a == b);
+  FAST_CHECK_UNARY(a != b);
+  FAST_CHECK_UNARY(a >= b);
+  FAST_CHECK_UNARY(a > b);
+  FAST_CHECK_UNARY_FALSE(a <= b);
+  FAST_CHECK_UNARY_FALSE(a < b);
+  FAST_CHECK_UNARY_FALSE(a == c);
+  FAST_CHECK_UNARY(a != c);
+  FAST_CHECK_UNARY_FALSE(a >= c);
+  FAST_CHECK_UNARY_FALSE(a > c);
+  FAST_CHECK_UNARY(a <= c);
+  FAST_CHECK_UNARY(a < c);
+  FAST_CHECK_UNARY_FALSE(a == l);
+  FAST_CHECK_UNARY(a != l);
+  FAST_CHECK_UNARY(a >= l);
+  FAST_CHECK_UNARY(a > l);
+  FAST_CHECK_UNARY_FALSE(a <= l);
+  FAST_CHECK_UNARY_FALSE(a < l);
+  FAST_CHECK_UNARY_FALSE(a == u);
+  FAST_CHECK_UNARY(a != u);
+  FAST_CHECK_UNARY_FALSE(a >= u);
+  FAST_CHECK_UNARY_FALSE(a > u);
+  FAST_CHECK_UNARY(a <= u);
+  FAST_CHECK_UNARY(a < u);
+  FAST_CHECK_UNARY_FALSE(a == n);
+  FAST_CHECK_UNARY_FALSE(a != n);
+  FAST_CHECK_UNARY_FALSE(a >= n);
+  FAST_CHECK_UNARY_FALSE(a > n);
+  FAST_CHECK_UNARY_FALSE(a <= n);
+  FAST_CHECK_UNARY_FALSE(a < n);
+
+  FAST_CHECK_UNARY_FALSE(b == a);
+  FAST_CHECK_UNARY(b != a);
+  FAST_CHECK_UNARY_FALSE(b >= a);
+  FAST_CHECK_UNARY_FALSE(b > a);
+  FAST_CHECK_UNARY(b <= a);
+  FAST_CHECK_UNARY(b < a);
+  FAST_CHECK_UNARY(b == b);
+  FAST_CHECK_UNARY_FALSE(b != b);
+  FAST_CHECK_UNARY(b >= b);
+  FAST_CHECK_UNARY_FALSE(b > b);
+  FAST_CHECK_UNARY(b <= b);
+  FAST_CHECK_UNARY_FALSE(b < b);
+  FAST_CHECK_UNARY_FALSE(b == c);
+  FAST_CHECK_UNARY(b != c);
+  FAST_CHECK_UNARY_FALSE(b >= c);
+  FAST_CHECK_UNARY_FALSE(b > c);
+  FAST_CHECK_UNARY(b <= c);
+  FAST_CHECK_UNARY(b < c);
+  FAST_CHECK_UNARY_FALSE(b == l);
+  FAST_CHECK_UNARY(b != l);
+  FAST_CHECK_UNARY(b >= l);
+  FAST_CHECK_UNARY(b > l);
+  FAST_CHECK_UNARY_FALSE(b <= l);
+  FAST_CHECK_UNARY_FALSE(b < l);
+  FAST_CHECK_UNARY_FALSE(b == u);
+  FAST_CHECK_UNARY(b != u);
+  FAST_CHECK_UNARY_FALSE(b >= u);
+  FAST_CHECK_UNARY_FALSE(b > u);
+  FAST_CHECK_UNARY(b <= u);
+  FAST_CHECK_UNARY(b < u);
+  FAST_CHECK_UNARY_FALSE(b == n);
+  FAST_CHECK_UNARY_FALSE(b != n);
+  FAST_CHECK_UNARY_FALSE(b >= n);
+  FAST_CHECK_UNARY_FALSE(b > n);
+  FAST_CHECK_UNARY_FALSE(b <= n);
+  FAST_CHECK_UNARY_FALSE(b < n);
+
+  FAST_CHECK_UNARY_FALSE(c == a);
+  FAST_CHECK_UNARY(c != a);
+  FAST_CHECK_UNARY(c >= a);
+  FAST_CHECK_UNARY(c > a);
+  FAST_CHECK_UNARY_FALSE(c <= a);
+  FAST_CHECK_UNARY_FALSE(c < a);
+  FAST_CHECK_UNARY_FALSE(c == b);
+  FAST_CHECK_UNARY(c != b);
+  FAST_CHECK_UNARY(c >= b);
+  FAST_CHECK_UNARY(c > b);
+  FAST_CHECK_UNARY_FALSE(c <= b);
+  FAST_CHECK_UNARY_FALSE(c < b);
+  FAST_CHECK_UNARY(c == c);
+  FAST_CHECK_UNARY_FALSE(c != c);
+  FAST_CHECK_UNARY(c >= c);
+  FAST_CHECK_UNARY_FALSE(c > c);
+  FAST_CHECK_UNARY(c <= c);
+  FAST_CHECK_UNARY_FALSE(c < c);
+  FAST_CHECK_UNARY_FALSE(c == l);
+  FAST_CHECK_UNARY(c != l);
+  FAST_CHECK_UNARY(c >= l);
+  FAST_CHECK_UNARY(c > l);
+  FAST_CHECK_UNARY_FALSE(c <= l);
+  FAST_CHECK_UNARY_FALSE(c < l);
+  FAST_CHECK_UNARY_FALSE(c == u);
+  FAST_CHECK_UNARY(c != u);
+  FAST_CHECK_UNARY_FALSE(c >= u);
+  FAST_CHECK_UNARY_FALSE(c > u);
+  FAST_CHECK_UNARY(c <= u);
+  FAST_CHECK_UNARY(c < u);
+  FAST_CHECK_UNARY_FALSE(c == n);
+  FAST_CHECK_UNARY_FALSE(c != n);
+  FAST_CHECK_UNARY_FALSE(c >= n);
+  FAST_CHECK_UNARY_FALSE(c > n);
+  FAST_CHECK_UNARY_FALSE(c <= n);
+  FAST_CHECK_UNARY_FALSE(c < n);
+
+  FAST_CHECK_UNARY_FALSE(l == a);
+  FAST_CHECK_UNARY(l != a);
+  FAST_CHECK_UNARY_FALSE(l >= a);
+  FAST_CHECK_UNARY_FALSE(l > a);
+  FAST_CHECK_UNARY(l <= a);
+  FAST_CHECK_UNARY(l < a);
+  FAST_CHECK_UNARY_FALSE(l == b);
+  FAST_CHECK_UNARY(l != b);
+  FAST_CHECK_UNARY_FALSE(l >= b);
+  FAST_CHECK_UNARY_FALSE(l > b);
+  FAST_CHECK_UNARY(l <= b);
+  FAST_CHECK_UNARY(l < b);
+  FAST_CHECK_UNARY_FALSE(l == c);
+  FAST_CHECK_UNARY(l != c);
+  FAST_CHECK_UNARY_FALSE(l >= c);
+  FAST_CHECK_UNARY_FALSE(l > c);
+  FAST_CHECK_UNARY(l <= c);
+  FAST_CHECK_UNARY(l < c);
+  FAST_CHECK_UNARY(l == l);
+  FAST_CHECK_UNARY_FALSE(l != l);
+  FAST_CHECK_UNARY(l >= l);
+  FAST_CHECK_UNARY_FALSE(l > l);
+  FAST_CHECK_UNARY(l <= l);
+  FAST_CHECK_UNARY_FALSE(l < l);
+  FAST_CHECK_UNARY_FALSE(l == u);
+  FAST_CHECK_UNARY(l != u);
+  FAST_CHECK_UNARY_FALSE(l >= u);
+  FAST_CHECK_UNARY_FALSE(l > u);
+  FAST_CHECK_UNARY(l <= u);
+  FAST_CHECK_UNARY(l < u);
+  FAST_CHECK_UNARY_FALSE(l == n);
+  FAST_CHECK_UNARY_FALSE(l != n);
+  FAST_CHECK_UNARY_FALSE(l >= n);
+  FAST_CHECK_UNARY_FALSE(l > n);
+  FAST_CHECK_UNARY_FALSE(l <= n);
+  FAST_CHECK_UNARY_FALSE(l < n);
+
+  FAST_CHECK_UNARY_FALSE(u == a);
+  FAST_CHECK_UNARY(u != a);
+  FAST_CHECK_UNARY(u >= a);
+  FAST_CHECK_UNARY(u > a);
+  FAST_CHECK_UNARY_FALSE(u <= a);
+  FAST_CHECK_UNARY_FALSE(u < a);
+  FAST_CHECK_UNARY_FALSE(u == b);
+  FAST_CHECK_UNARY(u != b);
+  FAST_CHECK_UNARY(u >= b);
+  FAST_CHECK_UNARY(u > b);
+  FAST_CHECK_UNARY_FALSE(u <= b);
+  FAST_CHECK_UNARY_FALSE(u < b);
+  FAST_CHECK_UNARY_FALSE(u == c);
+  FAST_CHECK_UNARY(u != c);
+  FAST_CHECK_UNARY(u >= c);
+  FAST_CHECK_UNARY(u > c);
+  FAST_CHECK_UNARY_FALSE(u <= c);
+  FAST_CHECK_UNARY_FALSE(u < c);
+  FAST_CHECK_UNARY_FALSE(u == l);
+  FAST_CHECK_UNARY(u != l);
+  FAST_CHECK_UNARY(u >= l);
+  FAST_CHECK_UNARY(u > l);
+  FAST_CHECK_UNARY_FALSE(u <= l);
+  FAST_CHECK_UNARY_FALSE(u < l);
+  FAST_CHECK_UNARY(u == u);
+  FAST_CHECK_UNARY_FALSE(u != u);
+  FAST_CHECK_UNARY(u >= u);
+  FAST_CHECK_UNARY_FALSE(u > u);
+  FAST_CHECK_UNARY(u <= u);
+  FAST_CHECK_UNARY_FALSE(u < u);
+  FAST_CHECK_UNARY_FALSE(u == n);
+  FAST_CHECK_UNARY_FALSE(u != n);
+  FAST_CHECK_UNARY_FALSE(u >= n);
+  FAST_CHECK_UNARY_FALSE(u > n);
+  FAST_CHECK_UNARY_FALSE(u <= n);
+  FAST_CHECK_UNARY_FALSE(u < n);
+
+  FAST_CHECK_UNARY_FALSE(n == a);
+  FAST_CHECK_UNARY_FALSE(n != a);
+  FAST_CHECK_UNARY_FALSE(n >= a);
+  FAST_CHECK_UNARY_FALSE(n > a);
+  FAST_CHECK_UNARY_FALSE(n <= a);
+  FAST_CHECK_UNARY_FALSE(n < a);
+  FAST_CHECK_UNARY_FALSE(n == b);
+  FAST_CHECK_UNARY_FALSE(n != b);
+  FAST_CHECK_UNARY_FALSE(n >= b);
+  FAST_CHECK_UNARY_FALSE(n > b);
+  FAST_CHECK_UNARY_FALSE(n <= b);
+  FAST_CHECK_UNARY_FALSE(n < b);
+  FAST_CHECK_UNARY_FALSE(n == c);
+  FAST_CHECK_UNARY_FALSE(n != c);
+  FAST_CHECK_UNARY_FALSE(n >= c);
+  FAST_CHECK_UNARY_FALSE(n > c);
+  FAST_CHECK_UNARY_FALSE(n <= c);
+  FAST_CHECK_UNARY_FALSE(n < c);
+  FAST_CHECK_UNARY_FALSE(n == l);
+  FAST_CHECK_UNARY_FALSE(n != l);
+  FAST_CHECK_UNARY_FALSE(n >= l);
+  FAST_CHECK_UNARY_FALSE(n > l);
+  FAST_CHECK_UNARY_FALSE(n <= l);
+  FAST_CHECK_UNARY_FALSE(n < l);
+  FAST_CHECK_UNARY_FALSE(n == u);
+  FAST_CHECK_UNARY_FALSE(n != u);
+  FAST_CHECK_UNARY_FALSE(n >= u);
+  FAST_CHECK_UNARY_FALSE(n > u);
+  FAST_CHECK_UNARY_FALSE(n <= u);
+  FAST_CHECK_UNARY_FALSE(n < u);
+  FAST_CHECK_UNARY_FALSE(n == n);
+  FAST_CHECK_UNARY_FALSE(n != n);
+  FAST_CHECK_UNARY_FALSE(n >= n);
+  FAST_CHECK_UNARY_FALSE(n > n);
+  FAST_CHECK_UNARY_FALSE(n <= n);
+  FAST_CHECK_UNARY_FALSE(n < n);
+
+}
+
+TEST_CASE("Operations")
+{
+  Size a(3), b(-2), c(4), l(Size::inf), u(-Size::inf);
+  Size n = l + u;
+
+  FAST_CHECK_EQ(-a, -3);
+  FAST_CHECK_EQ(-b, 2);
+  FAST_CHECK_EQ(-c, -4);
+  FAST_CHECK_EQ(-l, u);
+  FAST_CHECK_EQ(-u, l);
+  FAST_CHECK_UNARY((-n).isnan());
+  
+  FAST_CHECK_EQ(a + a, 6);
+  FAST_CHECK_EQ(a + b, 1);
+  FAST_CHECK_EQ(a + c, 7);
+  FAST_CHECK_EQ(a + l, l);
+  FAST_CHECK_EQ(a + u, u);
+  FAST_CHECK_UNARY((a + n).isnan());
+
+  FAST_CHECK_EQ(b + a, 1);
+  FAST_CHECK_EQ(b + b, -4);
+  FAST_CHECK_EQ(b + c, 2);
+  FAST_CHECK_EQ(b + l, l);
+  FAST_CHECK_EQ(b + u, u);
+  FAST_CHECK_UNARY((b + n).isnan());
+
+  FAST_CHECK_EQ(c + a, 7);
+  FAST_CHECK_EQ(c + b, 2);
+  FAST_CHECK_EQ(c + c, 8);
+  FAST_CHECK_EQ(c + l, l);
+  FAST_CHECK_EQ(c + u, u);
+  FAST_CHECK_UNARY((c + n).isnan());
+
+  FAST_CHECK_EQ(l + a, l);
+  FAST_CHECK_EQ(l + b, l);
+  FAST_CHECK_EQ(l + c, l);
+  FAST_CHECK_EQ(l + l, l);
+  FAST_CHECK_UNARY((l + u).isnan());
+  FAST_CHECK_UNARY((l + n).isnan());
+
+  FAST_CHECK_EQ(u + a, u);
+  FAST_CHECK_EQ(u + b, u);
+  FAST_CHECK_EQ(u + c, u);
+  FAST_CHECK_UNARY((u + l).isnan());
+  FAST_CHECK_EQ(u + u, u);
+  FAST_CHECK_UNARY((u + n).isnan());
+
+  FAST_CHECK_UNARY((n + a).isnan());
+  FAST_CHECK_UNARY((n + b).isnan());
+  FAST_CHECK_UNARY((n + c).isnan());
+  FAST_CHECK_UNARY((n + l).isnan());
+  FAST_CHECK_UNARY((n + u).isnan());
+  FAST_CHECK_UNARY((n + n).isnan());
+}
