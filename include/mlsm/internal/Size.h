@@ -27,9 +27,13 @@ public:
     return size_;
   }
 
+  /** If is finite returns the value (equivalent to operator int()), otherwise returns \p infiniteValue.*/
+  int toInt(int infiniteValue) const { return isfinite() ? size_ : infiniteValue; }
+
   Size operator-() const
   {
-    if(isnan()) return nan;
+    if(isnan())
+      return nan;
     return -size_;
   }
 
@@ -68,25 +72,13 @@ public:
     return *this;
   }
 
-  Size & operator-=(const Size & other)
-  {
-    return operator+=(-other);
-  }
+  Size & operator-=(const Size & other) { return operator+=(-other); }
 
-  bool isfinite() const
-  {
-    return -inf < size_ && size_ < inf;
-  }
+  bool isfinite() const { return -inf < size_ && size_ < inf; }
 
-  bool isinf() const
-  {
-    return !isfinite();
-  }
+  bool isinf() const { return !isfinite(); }
 
-  bool isnan() const
-  {
-    return size_ == nan;
-  }
+  bool isnan() const { return size_ == nan; }
 
 private:
   static constexpr int nan = std::numeric_limits<int>::min();
@@ -112,32 +104,38 @@ inline Size operator-(Size lhs, const Size & rhs)
 
 inline bool operator==(const Size & lhs, const Size & rhs)
 {
-  if(lhs.isnan() || rhs.isnan()) return false;
+  if(lhs.isnan() || rhs.isnan())
+    return false;
   return lhs.size_ == rhs.size_;
 }
 inline bool operator!=(const Size & lhs, const Size & rhs)
 {
-  if(lhs.isnan() || rhs.isnan()) return false;
+  if(lhs.isnan() || rhs.isnan())
+    return false;
   return !operator==(lhs, rhs);
 }
 inline bool operator<(const Size & lhs, const Size & rhs)
 {
-  if(lhs.isnan() || rhs.isnan()) return false;
+  if(lhs.isnan() || rhs.isnan())
+    return false;
   return lhs.size_ < rhs.size_;
 }
 inline bool operator>(const Size & lhs, const Size & rhs)
 {
-  if(lhs.isnan() || rhs.isnan()) return false;
+  if(lhs.isnan() || rhs.isnan())
+    return false;
   return operator<(rhs, lhs);
 }
 inline bool operator<=(const Size & lhs, const Size & rhs)
 {
-  if(lhs.isnan() || rhs.isnan()) return false;
+  if(lhs.isnan() || rhs.isnan())
+    return false;
   return !operator>(lhs, rhs);
 }
 inline bool operator>=(const Size & lhs, const Size & rhs)
 {
-  if(lhs.isnan() || rhs.isnan()) return false;
+  if(lhs.isnan() || rhs.isnan())
+    return false;
   return !operator<(lhs, rhs);
 }
 
