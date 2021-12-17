@@ -16,6 +16,7 @@ set(MLSM_HEADERS
   ${MLSM_INCLUDE_DIR}/MatrixBase.h
   ${MLSM_INCLUDE_DIR}/SimpleMatrix.h
 #  ${MLSM_INCLUDE_DIR}/ShapeDescriptor.h
+  ${MLSM_INCLUDE_DIR}/internal/LineIterator.h
   ${MLSM_INCLUDE_DIR}/internal/Shape.h
   ${MLSM_INCLUDE_DIR}/internal/Size.h
   ${MLSM_INCLUDE_DIR}/internal/SimpleStorage.h

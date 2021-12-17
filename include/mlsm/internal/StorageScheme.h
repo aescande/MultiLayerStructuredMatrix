@@ -19,64 +19,8 @@ enum class SymmetricStorage
 class StorageScheme
 {
 public:
-  class IteratorBase
-  {
-  public:
-    IteratorBase(int l) : l_(l) {}
-    virtual int val() const { return -1; }
-    virtual void next(){};
-    int line() const { return l_; }
-
-  protected:
-    int l_;
-  };
-
-  template<bool Row>
-  class Line
-  {
-  public:
-    class Iterator
-    {
-    public:
-      Iterator & operator++()
-      {
-        it_->next();
-        return *this;
-      }
-      int operator*() const { return it_->val(); }
-
-      friend bool operator==(const Iterator & a, const Iterator & b)
-      {
-        return a.it_->line() == b.it_->line() && *a == *b;
-      };
-      friend bool operator!=(const Iterator & a, const Iterator & b) { return !(a == b); };
-
-    private:
-      Iterator(int l) : it_(new IteratorBase(l)) {}
-      Iterator(const StorageScheme & s, int l)
-      {
-        if constexpr(Row)
-          it_ = s.rowIterator(l);
-        else
-          it_ = s.colIterator(l);
-      }
-      std::unique_ptr<IteratorBase> it_;
-      friend class Row;
-      friend class Col;
-    };
-
-    Iterator begin() const { return {s_, l_}; }
-    Iterator end() const { return {l_}; }
-
-  private:
-    Line(const StorageScheme & s, int l) : l_(l), s_(s) {}
-    int l_;
-    const StorageScheme & s_;
-    friend class StorageScheme;
-  };
-
-  using Row = Line<true>;
-  using Col = Line<false>;
+  using Row = Line<int, StorageScheme, true>;
+  using Col = Line<int, StorageScheme, false>;
 
   StorageScheme(SymmetricStorage symmetric) : shape_(nullptr), symmetric_(symmetric) {}
 
@@ -108,8 +52,8 @@ public:
   Row row(int r) const { return {*this, r}; }
   Col col(int c) const { return {*this, c}; }
 
-  virtual std::unique_ptr<IteratorBase> rowIterator(int r) const = 0;
-  virtual std::unique_ptr<IteratorBase> colIterator(int c) const = 0;
+  virtual typename Row::UnderlyingItPtr rowIterator(int r) const = 0;
+  virtual typename Col::UnderlyingItPtr colIterator(int c) const = 0;
 
 protected:
   bool isSymmetric() const { return symmetric_ != SymmetricStorage::None; }
@@ -124,10 +68,10 @@ protected:
 class DenseStorageScheme : public StorageScheme
 {
 public:
-  class RowIterator : public StorageScheme::IteratorBase
+  class RowIterator : public LineIteratorBase<int>
   {
   public:
-    RowIterator(int r, const DenseShape & s) : IteratorBase(r), v_(r), s_(s), last_((s_.cols() - 1) * s_.rows()) {}
+    RowIterator(int r, const DenseShape & s) : LineIteratorBase(r), v_(r), s_(s), last_((s_.cols() - 1) * s_.rows()) {}
     int val() const override { return v_; }
     void next() override
     {
@@ -146,10 +90,10 @@ public:
     int last_;
   };
 
-  class ColIterator : public StorageScheme::IteratorBase
+  class ColIterator : public LineIteratorBase<int>
   {
   public:
-    ColIterator(int c, const DenseShape & s) : IteratorBase(c), v_(c * s.rows()), s_(s) {}
+    ColIterator(int c, const DenseShape & s) : LineIteratorBase(c), v_(c * s.rows()), s_(s) {}
     int val() const override { return v_; }
     void next() override
     {
@@ -168,13 +112,13 @@ public:
   };
   DenseStorageScheme() : StorageScheme(SymmetricStorage::None) {}
   int size() const override { return shape_->cols() * shape_->rows(); }
-  std::unique_ptr<IteratorBase> rowIterator(int r) const override
+  typename Row::UnderlyingItPtr rowIterator(int r) const override
   {
-    return std::unique_ptr<IteratorBase>(new RowIterator(r, shape()));
+    return typename Row::UnderlyingItPtr(new RowIterator(r, shape()));
   }
-  std::unique_ptr<IteratorBase> colIterator(int c) const override
+  typename Col::UnderlyingItPtr colIterator(int c) const override
   {
-    return std::unique_ptr<IteratorBase>(new ColIterator(c, shape()));
+    return typename Col::UnderlyingItPtr(new ColIterator(c, shape()));
   }
 
 protected:
