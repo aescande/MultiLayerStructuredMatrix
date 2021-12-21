@@ -2,8 +2,10 @@
 
 #pragma once
 
+#include <mlsm/internal/LineIterator.h>
 #include <mlsm/internal/Size.h>
 
+#include <algorithm>
 #include <memory>
 #include <stdexcept>
 
@@ -22,12 +24,23 @@ enum class ShapeType
 class ShapeBase;
 using ShapePtr = std::unique_ptr<ShapeBase>;
 
+template<>
+struct LineIteratorTraits<int>
+{
+  static constexpr int End = -1;
+};
+
 /** Describe the size of a matrix and its non-zero pattern, i.e. where the (possibly) non-zero
  * elements can be found.
  */
 class ShapeBase
 {
 public:
+  template<bool Row>
+  using Line = Line<int, ShapeBase, Row>;
+  using Row = Line<true>;
+  using Col = Line<false>;
+
   ShapeBase(int rows, int cols) : rows_(rows), cols_(cols) { assert(rows >= 0 && cols >= 0); }
 
   virtual ShapeType type() const = 0;
@@ -39,7 +52,50 @@ public:
   int minDim() const { return std::min(rows_, cols_); }
   int maxDim() const { return std::max(rows_, cols_); }
 
-  bool checkIndices(int r, int c) const { return r >= 0 && r < rows_ && c >= 0 && c < cols_; }
+  bool checkRowIndex(int r) const { return r >= 0 && r < rows_; }
+  bool checkColIndex(int c) const { return c >= 0 && c < cols_; }
+  bool checkIndices(int r, int c) const { return checkRowIndex(r) && checkColIndex(c); }
+
+  /** Number of non-zero on row \p r.*/
+  int rowNNZ(int r) const
+  {
+    assert(checkRowIndex(r));
+    return rowNNZ_(r);
+  }
+  /** Number of non-zero on col \p c.*/
+  int colNNZ(int c) const
+  {
+    assert(checkColIndex(c));
+    return colNNZ_(c);
+  }
+
+  Row row(int r) const
+  {
+    assert(checkRowIndex(r));
+    return {*this, r};
+  }
+  Col col(int c) const
+  {
+    assert(checkColIndex(c));
+    return {*this, c};
+  }
+
+  typename Row::UnderlyingItPtr rowIterator(int r) const
+  {
+    assert(checkRowIndex(r));
+    return rowIterator_(r);
+  }
+  typename Col::UnderlyingItPtr colIterator(int c) const
+  {
+    assert(checkColIndex(c));
+    return colIterator_(c);
+  }
+
+protected:
+  virtual int rowNNZ_(int r) const = 0;
+  virtual int colNNZ_(int c) const = 0;
+  virtual typename Row::UnderlyingItPtr rowIterator_(int r) const = 0;
+  virtual typename Col::UnderlyingItPtr colIterator_(int c) const = 0;
 
 private:
   int rows_;
@@ -53,15 +109,15 @@ public:
   EmptyShape(int rows, int cols) : ShapeBase(rows, cols) {}
   ShapeType type() const override { return ShapeType::Empty; }
 
-  ShapePtr copy() const override
-  {
-    return ShapePtr(new EmptyShape(rows(), cols()));
-  }
+  ShapePtr copy() const override { return ShapePtr(new EmptyShape(rows(), cols())); }
 
-  ShapePtr transposed() const override
-  {
-    return ShapePtr(new EmptyShape(cols(), rows()));
-  }
+  ShapePtr transposed() const override { return ShapePtr(new EmptyShape(cols(), rows())); }
+
+protected:
+  int rowNNZ_(int r) const override { return 0; }
+  int colNNZ_(int c) const override { return 0; }
+  typename Row::UnderlyingItPtr rowIterator_(int r) const override { return std::make_unique<Row::UnderlyingIt>(r); };
+  typename Col::UnderlyingItPtr colIterator_(int c) const override { return std::make_unique<Col::UnderlyingIt>(c); };
 };
 
 /** Describe a matrix band structure, i.e. non-zero are the elements a_{i,j} such that
@@ -82,10 +138,7 @@ public:
   }
 
   ShapeType type() const override { return ShapeType::Band; }
-  ShapePtr copy() const override
-  {
-    return ShapePtr(new BandShape(rows(), cols(), lowerBandwidth_, upperBandwidth_));
-  }
+  ShapePtr copy() const override { return ShapePtr(new BandShape(rows(), cols(), lowerBandwidth_, upperBandwidth_)); }
 
   ShapePtr transposed() const override
   {
@@ -113,6 +166,23 @@ public:
   bool isEmpty() const { return -lowerBandwidth_ >= cols() || -upperBandwidth_ >= rows(); }
   bool isDense() const { return lowerBandwidth_ >= rows() - 1 && upperBandwidth_ >= cols() - 1; }
 
+protected:
+  int rBegin(int r) const { return std::clamp(r - lowerBandwidth_.toInt(cols()), 0, cols()); }
+  int cBegin(int c) const { return std::clamp(c - upperBandwidth_.toInt(rows()), 0, rows()); }
+  int rEnd(int r) const { return std::clamp(r + upperBandwidth_.toInt(cols()) + 1, 0, cols()); }
+  int cEnd(int c) const { return std::clamp(c + lowerBandwidth_.toInt(rows()) + 1, 0, rows()); }
+  int rowNNZ_(int r) const override { return rEnd(r) - rBegin(r); }
+  int colNNZ_(int c) const override { return cEnd(c) - cBegin(c); }
+
+  typename Row::UnderlyingItPtr rowIterator_(int r) const override
+  {
+    return Row::UnderlyingItPtr(new ContinuousLineIterator<int>(r, rBegin(r), rEnd(r)));
+  }
+  typename Col::UnderlyingItPtr colIterator_(int c) const override
+  {
+    return Row::UnderlyingItPtr(new ContinuousLineIterator<int>(c, cBegin(c), cEnd(c)));
+  };
+
 private:
   Size lowerBandwidth_;
   Size upperBandwidth_;
@@ -124,14 +194,20 @@ class DenseShape : public ShapeBase
 public:
   DenseShape(int rows, int cols) : ShapeBase(rows, cols) {}
   ShapeType type() const override { return ShapeType::Dense; }
-  ShapePtr copy() const override
-  {
-    return ShapePtr(new DenseShape(rows(), cols()));
-  }
+  ShapePtr copy() const override { return ShapePtr(new DenseShape(rows(), cols())); }
 
-  ShapePtr transposed() const override
+  ShapePtr transposed() const override { return ShapePtr(new DenseShape(cols(), rows())); }
+
+protected:
+  int rowNNZ_(int r) const override { return cols(); }
+  int colNNZ_(int c) const override { return rows(); }
+  typename Row::UnderlyingItPtr rowIterator_(int r) const override
   {
-    return ShapePtr(new DenseShape(cols(), rows()));
+    return Row::UnderlyingItPtr(new ContinuousLineIterator<int>(r, 0, cols()));
+  }
+  typename Col::UnderlyingItPtr colIterator_(int c) const override
+  {
+    return Col::UnderlyingItPtr(new ContinuousLineIterator<int>(c, 0, rows()));
   }
 };
 
@@ -194,8 +270,8 @@ inline ShapePtr mult(const ShapeBase & lhs, const ShapeBase & rhs)
   // Case 3
   if(lhs.type() == ShapeType::Band && rhs.type() == ShapeType::Band)
   {
-    const auto& l = static_cast<const BandShape &>(lhs);
-    const auto& r = static_cast<const BandShape &>(rhs);
+    const auto & l = static_cast<const BandShape &>(lhs);
+    const auto & r = static_cast<const BandShape &>(rhs);
     return std::make_unique<BandShape>(rows, cols, l.lowerBandwidth() + r.lowerBandwidth(),
                                        l.upperBandwidth() + r.upperBandwidth());
   }

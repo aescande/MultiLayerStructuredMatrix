@@ -12,7 +12,9 @@ namespace mls::internal
  */
 template<typename T>
 struct LineIteratorTraits
-{};
+{
+  static constexpr T End = {};
+};
 
 template<typename T>
 class LineIteratorBase

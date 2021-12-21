@@ -28,7 +28,7 @@ public:
   }
 
   /** If is finite returns the value (equivalent to operator int()), otherwise returns \p infiniteValue.*/
-  int toInt(int infiniteValue) const { return isfinite() ? size_ : infiniteValue; }
+  int toInt(int infiniteValue) const { return isfinite() ? size_ : (size_ > 0 ? infiniteValue : -infiniteValue); }
 
   Size operator-() const
   {

@@ -374,3 +374,105 @@ TEST_CASE("Multiplication of ShapeType")
   FAST_CHECK_EQ(dd->rows(), 5);
   FAST_CHECK_EQ(dd->cols(), 5);
 }
+
+TEST_CASE("Line iterators")
+{
+  SUBCASE("Band shape")
+  {
+    ShapePtr s = std::make_unique<BandShape>(4, 7, 1, 0);
+    FAST_CHECK_EQ(s->row(0).size(), 1);
+    FAST_CHECK_EQ(s->row(1).size(), 2);
+    FAST_CHECK_EQ(s->row(2).size(), 2);
+    FAST_CHECK_EQ(s->row(3).size(), 2);
+    FAST_CHECK_EQ(s->col(0).size(), 2);
+    FAST_CHECK_EQ(s->col(1).size(), 2);
+    FAST_CHECK_EQ(s->col(2).size(), 2);
+    FAST_CHECK_EQ(s->col(3).size(), 1);
+    FAST_CHECK_EQ(s->col(4).size(), 0);
+    FAST_CHECK_EQ(s->col(5).size(), 0);
+    FAST_CHECK_EQ(s->col(6).size(), 0);
+
+    int i = 1;
+    for(auto k : s->row(2))
+    {
+      FAST_CHECK_EQ(k, i);
+      ++i;
+    }
+    i = 1;
+    for(auto k : s->col(1))
+    {
+      FAST_CHECK_EQ(k, i);
+      ++i;
+    }
+
+    s = std::make_unique<BandShape>(7, 4, 1, 0);
+    FAST_CHECK_EQ(s->row(0).size(), 1);
+    FAST_CHECK_EQ(s->row(1).size(), 2);
+    FAST_CHECK_EQ(s->row(2).size(), 2);
+    FAST_CHECK_EQ(s->row(3).size(), 2);
+    FAST_CHECK_EQ(s->row(4).size(), 1);
+    FAST_CHECK_EQ(s->row(5).size(), 0);
+    FAST_CHECK_EQ(s->row(6).size(), 0);
+    FAST_CHECK_EQ(s->col(0).size(), 2);
+    FAST_CHECK_EQ(s->col(1).size(), 2);
+    FAST_CHECK_EQ(s->col(2).size(), 2);
+    FAST_CHECK_EQ(s->col(3).size(), 2);
+
+    s = std::make_unique<BandShape>(6, 6, -1, 3);
+    FAST_CHECK_EQ(s->row(0).size(), 3);
+    FAST_CHECK_EQ(s->row(1).size(), 3);
+    FAST_CHECK_EQ(s->row(2).size(), 3);
+    FAST_CHECK_EQ(s->row(3).size(), 2);
+    FAST_CHECK_EQ(s->row(4).size(), 1);
+    FAST_CHECK_EQ(s->row(5).size(), 0);
+    FAST_CHECK_EQ(s->col(0).size(), 0);
+    FAST_CHECK_EQ(s->col(1).size(), 1);
+    FAST_CHECK_EQ(s->col(2).size(), 2);
+    FAST_CHECK_EQ(s->col(3).size(), 3);
+    FAST_CHECK_EQ(s->col(4).size(), 3);
+    FAST_CHECK_EQ(s->col(5).size(), 3);
+
+    s = std::make_unique<BandShape>(6, 6, 1, Size::inf);
+    FAST_CHECK_EQ(s->row(0).size(), 6);
+    FAST_CHECK_EQ(s->row(1).size(), 6);
+    FAST_CHECK_EQ(s->row(2).size(), 5);
+    FAST_CHECK_EQ(s->row(3).size(), 4);
+    FAST_CHECK_EQ(s->row(4).size(), 3);
+    FAST_CHECK_EQ(s->row(5).size(), 2);
+    FAST_CHECK_EQ(s->col(0).size(), 2);
+    FAST_CHECK_EQ(s->col(1).size(), 3);
+    FAST_CHECK_EQ(s->col(2).size(), 4);
+    FAST_CHECK_EQ(s->col(3).size(), 5);
+    FAST_CHECK_EQ(s->col(4).size(), 6);
+    FAST_CHECK_EQ(s->col(5).size(), 6);
+  }
+
+  SUBCASE("Dense shape")
+  {
+    ShapePtr s = std::make_unique<DenseShape>(4, 7);
+    FAST_CHECK_EQ(s->row(0).size(), 7);
+    FAST_CHECK_EQ(s->row(1).size(), 7);
+    FAST_CHECK_EQ(s->row(2).size(), 7);
+    FAST_CHECK_EQ(s->row(3).size(), 7);
+    FAST_CHECK_EQ(s->col(0).size(), 4);
+    FAST_CHECK_EQ(s->col(1).size(), 4);
+    FAST_CHECK_EQ(s->col(2).size(), 4);
+    FAST_CHECK_EQ(s->col(3).size(), 4);
+    FAST_CHECK_EQ(s->col(4).size(), 4);
+    FAST_CHECK_EQ(s->col(5).size(), 4);
+    FAST_CHECK_EQ(s->col(6).size(), 4);
+
+    int i = 0;
+    for(auto k : s->row(2))
+    {
+      FAST_CHECK_EQ(k, i);
+      ++i;
+    }
+    i = 0;
+    for(auto k : s->col(1))
+    {
+      FAST_CHECK_EQ(k, i);
+      ++i;
+    }
+  }
+}
