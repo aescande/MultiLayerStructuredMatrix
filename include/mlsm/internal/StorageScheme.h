@@ -6,6 +6,7 @@
 
 #include <assert.h>
 #include <utility>
+#include <vector>
 
 namespace mls::internal
 {
@@ -19,17 +20,73 @@ enum class SymmetricStorage
 class StorageScheme
 {
 public:
-  using Row = Line<int, StorageScheme, true>;
-  using Col = Line<int, StorageScheme, false>;
+  struct LineIterValue
+  {
+    int i = -1;      // Place of the element in the line
+    int idx = 0;     // Index of the element in the storage
+    bool tr = false; // Need to transpose the element
+
+    friend bool operator==(const LineIterValue & lhs, const LineIterValue & rhs)
+    {
+      return std::tie(lhs.i, lhs.idx, lhs.tr) == std::tie(rhs.i, rhs.idx, rhs.tr);
+    }
+  };
+
+  template<bool Row>
+  class LineIterator : public Line<LineIterValue, StorageScheme, Row>::UnderlyingIt
+  {
+  public:
+    using Base = typename Line<LineIterValue, StorageScheme, Row>::UnderlyingIt;
+    LineIterator(int l, const StorageScheme & s)
+    : Base(l), shapeIt_(shapeLine(l, s).begin()), shapeItEnd_(shapeLine(l, s).end()), scheme_(s)
+    {
+      assign();
+    }
+    LineIterValue val() const override { return v_; }
+    void next() override
+    {
+      if(++shapeIt_ != shapeItEnd_)
+        assign();
+      else
+        v_ = {};
+    };
+
+  private:
+    const auto & shapeLine(int l, const StorageScheme & s)
+    {
+      if constexpr(Row)
+        return s.shape().row(l);
+      else
+        return s.shape().col(l);
+    }
+    void assign()
+    {
+      v_.i = *shapeIt_;
+      if constexpr(Row)
+        std::tie(v_.idx, v_.tr) = scheme_.index(line(), v_.i);
+      else
+        std::tie(v_.idx, v_.tr) = scheme_.index(v_.i, line());
+    }
+    typename ShapeBase::Line<Row>::Iterator shapeIt_;
+    typename ShapeBase::Line<Row>::Iterator shapeItEnd_;
+    const StorageScheme & scheme_;
+    LineIterValue v_;
+  };
+
+  using Row = Line<LineIterValue, StorageScheme, true>;
+  using Col = Line<LineIterValue, StorageScheme, false>;
+  using RowIterator = LineIterator<true>;
+  using ColIterator = LineIterator<false>;
 
   StorageScheme(SymmetricStorage symmetric) : shape_(nullptr), symmetric_(symmetric) {}
 
   void setShape(const ShapeBase & shape)
   {
-    assert(!isSymmetric() || shape_->rows() == shape_->cols());
+    assert(!isSymmetric() || shape.rows() == shape.cols());
     shape_ = &shape;
     processShape_();
   }
+  const ShapeBase & shape() const { return *shape_; }
 
   /** Return true if stored.*/
   virtual bool isStored(int r, int c) const
@@ -52,8 +109,8 @@ public:
   Row row(int r) const { return {*this, r}; }
   Col col(int c) const { return {*this, c}; }
 
-  virtual typename Row::UnderlyingItPtr rowIterator(int r) const = 0;
-  virtual typename Col::UnderlyingItPtr colIterator(int c) const = 0;
+  virtual typename Row::UnderlyingItPtr rowIterator(int r) const { return std::make_unique<RowIterator>(r, *this); }
+  virtual typename Col::UnderlyingItPtr colIterator(int c) const { return std::make_unique<ColIterator>(c, *this); }
 
 protected:
   bool isSymmetric() const { return symmetric_ != SymmetricStorage::None; }
@@ -68,65 +125,15 @@ protected:
 class DenseStorageScheme : public StorageScheme
 {
 public:
-  class RowIterator : public LineIteratorBase<int>
-  {
-  public:
-    RowIterator(int r, const DenseShape & s) : LineIteratorBase(r), v_(r), s_(s), last_((s_.cols() - 1) * s_.rows()) {}
-    int val() const override { return v_; }
-    void next() override
-    {
-      if(v_ != -1)
-      {
-        if(v_ < last_)
-          v_ += s_.rows();
-        else
-          v_ = -1;
-      }
-    };
-
-  private:
-    int v_;
-    const DenseShape & s_;
-    int last_;
-  };
-
-  class ColIterator : public LineIteratorBase<int>
-  {
-  public:
-    ColIterator(int c, const DenseShape & s) : LineIteratorBase(c), v_(c * s.rows()), s_(s) {}
-    int val() const override { return v_; }
-    void next() override
-    {
-      if(v_ != -1)
-      {
-        if(v_ < s_.cols() - 1)
-          ++v_;
-        else
-          v_ = -1;
-      }
-    };
-
-  private:
-    int v_;
-    const DenseShape & s_;
-  };
   DenseStorageScheme() : StorageScheme(SymmetricStorage::None) {}
   int size() const override { return shape_->cols() * shape_->rows(); }
-  typename Row::UnderlyingItPtr rowIterator(int r) const override
-  {
-    return typename Row::UnderlyingItPtr(new RowIterator(r, shape()));
-  }
-  typename Col::UnderlyingItPtr colIterator(int c) const override
-  {
-    return typename Col::UnderlyingItPtr(new ColIterator(c, shape()));
-  }
 
 protected:
   void processShape_() override { assert(dynamic_cast<const DenseShape *>(shape_)); }
 
   bool isStored_(int r, int c) const override { return true; };
 
-  std::pair<int, bool> index_(int r, int c) const override { return {c * shape_->cols() + r, false}; }
+  std::pair<int, bool> index_(int r, int c) const override { return {c * shape_->rows() + r, false}; }
 
 private:
   const DenseShape & shape() const { return static_cast<const DenseShape &>(*shape_); }
@@ -145,7 +152,7 @@ private:
  * |  0   0  B13 B24 B35 B46 B57 |
  * |  0  B12 B23 B34 B45 B56  0  |
  * | B11 B22 B33 B44 B55  0   0  |
- * | B21 B32 B43 B45  0   0   0  |
+ * | B21 B32 B43 B54  0   0   0  |
  * and represented in a column-major way i.e
  * (0, 0, B12, B21, 0, B12, B22, B32, B13, B23, B33, B43, B24, ...)
  *
@@ -158,6 +165,9 @@ class BandStorageScheme : public StorageScheme
 public:
   BandStorageScheme(SymmetricStorage s = SymmetricStorage::None) : StorageScheme(s) {}
   int size() const override { return (cn_ - c0_) * b_; }
+  int effectiveBandwidth() const { return b_; }
+  int effectiveLowerBandwidth() const { return le_; }
+  int effectiveUpperBandwidth() const { return ue_; }
 
 protected:
   void processShape_() override
@@ -165,14 +175,21 @@ protected:
     assert(dynamic_cast<const BandShape *>(shape_));
     const auto & s = shape();
     assert((!isSymmetric() || s.lowerBandwidth() == s.upperBandwidth())
-           && "Symmetric band matrix should have the same lower and upper bandwidth");
+           && "Symmetric band matrix should have the same lower and upper bandwidth.");
+    assert((!isSymmetric() || s.rows() == s.cols()));
 
-    c0_ = std::max(0, -int(s.lowerBandwidth()));
-    cn_ = std::min(s.cols(), s.rows() + int(s.upperBandwidth()));
-    if(isSymmetric())
-      b_ = int(shape().upperBandwidth()) + 1;
-    else
-      b_ = int(shape().bandwidth());
+    int r = s.rows();
+    int c = s.cols();
+    int lm = s.lowerBandwidth().toInt(s.maxDim());
+    int um = s.upperBandwidth().toInt(s.maxDim());
+    // Effective lower and upper bandwidth
+    le_ = (symmetric_ == SymmetricStorage::Upper) ? 0 : std::clamp(lm, - c, r - 1);
+    ue_ = (symmetric_ == SymmetricStorage::Lower) ? 0 : std::clamp(um, - r, c - 1);
+    assert(!isSymmetric() || (le_ >= 0 && ue_ >= 0));
+
+    c0_ = std::max(0, -le_);
+    cn_ = std::min(s.cols(), s.rows() + ue_);
+    b_ = le_ + ue_ + 1;
   }
 
   bool isStored_(int r, int c) const override
@@ -195,20 +212,23 @@ protected:
     if(!shape().isNonZero(r, c))
       return {-1, false};
 
+    // We have that c-u <= r <= c+l. This is equivalent to 0 <= r-c+u <= l+u
+    // We make the "coordinate change" (r, c) -> (r-c+u, c-c0)
+    auto idx = [this](int r, int c) { return r - c + ue_ + (c - c0_) * b_; };
     switch(symmetric_)
     {
       case SymmetricStorage::None:
-        return {r + (c - c0_) * b_, false};
+        return {idx(r, c), false};
       case SymmetricStorage::Lower:
         if(r >= c)
-          return {r + c * b_, false};
+          return {idx(r, c), false};
         else
-          return {c + r * b_, true};
+          return {idx(c, r), true};
       case SymmetricStorage::Upper:
         if(r <= c)
-          return {r + c * b_, false};
+          return {idx(r, c), false};
         else
-          return {c + r * b_, true};
+          return {idx(c, r), true};
       default:
         assert(false);
     }
@@ -217,9 +237,11 @@ protected:
 private:
   const BandShape & shape() const { return static_cast<const BandShape &>(*shape_); }
 
-  int c0_; // first non-zero column
-  int cn_; // first zero column after the non-zero ones
-  int b_;  // effective bandwith from the storage viewpoint
+  int c0_ = -1; // first non-zero column
+  int cn_ = -1; // first zero column after the non-zero ones
+  int b_ = -1;  // effective bandwith from the storage viewpoint
+  int le_ = 0;
+  int ue_ = 0;
 };
 
 } // namespace mls::internal
