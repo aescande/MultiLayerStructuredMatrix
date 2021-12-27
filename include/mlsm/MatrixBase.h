@@ -23,7 +23,7 @@ using MatrixPtr = std::shared_ptr<MatrixBase>;
 using MatrixConstPtr = std::shared_ptr<const MatrixBase>;
 
 /** A pair (matrix ptr, bool) where the pointer is to a const or non-const MatrixBase and the bool
- * indicate whether the matrix is transposed or not. Used to return a submatrix.
+ * indicates whether the matrix is transposed or not. Used to return a submatrix.
  */
 template<bool Const>
 struct TransposableMatrix
@@ -46,6 +46,17 @@ struct TransposableMatrix
 
   void transpose() { trans = !trans; }
   TransposableMatrix transposed() const { return {matrix, !trans}; }
+  /** If \p tr is true, tranpose the matrix*/
+  TransposableMatrix transposed(bool tr) const
+  {
+    if(tr)
+      return {matrix, !trans};
+    else
+      return {matrix, trans};
+  }
+
+  double operator()(int r, int c) const { return trans ? (*matrix)(c, r) : (*matrix)(r, c); }
+  void toDense(MatrixRef D, bool transpose) { matrix->toDense(D, trans ? !transpose : transpose); }
 };
 
 using constTransposableMatrix = TransposableMatrix<true>;
@@ -72,18 +83,37 @@ public:
     assert(r >= 0 && r < rows() && c >= 0 && c < cols());
     return v_coeffRef(r, c);
   };
-  //double & coeffRef(int r, int c);
+  // double & coeffRef(int r, int c);
 
   constTransposableMatrix block(int r, int c) const;
   nonConstTransposableMatrix block(int r, int c);
 
   virtual void updateSize() = 0;
+  virtual bool isAutoResizable() const { return false; }
+  void autoResize(int r, int c)
+  {
+    if(!isAutoResizable())
+    {
+      throw std::runtime_error("[MatrixBase::autoResize] This matrix is not auto-resizable.");
+    }
+    v_autoResize(r, c);
+  }
+
+  virtual void toDense(MatrixRef D, bool transpose) const = 0;
+
+  Eigen::MatrixXd toDense() const
+  {
+    Eigen::MatrixXd D(rows(), cols());
+    toDense(D, false);
+    return D;
+  }
 
 protected:
   virtual constTransposableMatrix v_block(int r, int c) const = 0;
   virtual nonConstTransposableMatrix v_block(int r, int c) = 0;
-  virtual bool v_isAutoResizable() const = 0;
+  virtual void v_autoResize(int r, int c) = 0;
   virtual double v_coeffRef(int r, int c) const = 0;
-  //virtual double & v_coeffRef(int r, int c) = 0;
+  // virtual double & v_coeffRef(int r, int c) = 0;
 };
+
 } // namespace mls
