@@ -20,6 +20,7 @@ enum class SymmetricStorage
 class StorageScheme
 {
 public:
+  /** A triplet used as value for a dereferenced iterator on a line*/
   struct LineIterValue
   {
     int i = -1;      // Place of the element in the line
@@ -32,6 +33,13 @@ public:
     }
   };
 
+  /** A default implementation of LineIteratorBase that uses the line iterator of the shape for
+   * getting the place of the element in the line and retrieves the index in the storage (and need
+   * to transpose) by simply calling the \c index function of the storage scheme.
+   * 
+   * This might not be efficient for some storage scheme, in which case a dedicated implementation
+   * should be used.
+   */
   template<bool Row>
   class LineIterator : public Line<LineIterValue, StorageScheme, Row>::UnderlyingIt
   {
